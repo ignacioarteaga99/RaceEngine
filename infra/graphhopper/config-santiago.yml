@@ -1,0 +1,42 @@
+# Configuración de GraphHopper para la región de Santiago.
+# Ver doc 11 §6.2, fases GH-2/GH-3/GH-4.
+graphhopper:
+  datareader.file: /data/santiago.osm.pbf
+  graph.location: /graph-cache
+
+  profiles:
+    - name: foot
+      vehicle: foot
+      weighting: fastest
+    # Perfil de carrera: usa el custom model de race_marathon.json
+    - name: race
+      vehicle: foot
+      weighting: custom
+      custom_model_files: [race_marathon]
+
+  profiles_ch:
+    - profile: foot
+  profiles_lm:
+    - profile: race
+
+  # Encoded values que el motor consulta en los custom models.
+  graph.encoded_values: road_class, road_environment, road_access, surface, smoothness, max_speed
+
+  # ── Elevación (fase GH-4) ────────────────────────────────────────────────
+  # `cgiar` funciona sin registro pero es SRTM. Para Copernicus GLO-30
+  # (doc 07 §3.1) usa `multi` con tiles locales montadas en /dem.
+  graph.elevation.provider: cgiar
+  graph.elevation.cache_dir: /graph-cache/elevation
+  graph.elevation.dataaccess: MMAP
+
+  import.osm.ignored_highways: footway,cycleway,path,pedestrian,steps
+
+server:
+  application_connectors:
+    - type: http
+      port: 8989
+      bind_host: 0.0.0.0
+  admin_connectors:
+    - type: http
+      port: 8990
+      bind_host: 0.0.0.0

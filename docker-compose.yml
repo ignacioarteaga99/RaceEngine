@@ -1,0 +1,51 @@
+# Compose de desarrollo. La app funciona SIN esto (proveedor de routing local);
+# graphhopper es opcional y se activa con RACEENGINE_ROUTING=graphhopper.
+services:
+
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      RACEENGINE_WARM: "demo"
+    volumes:
+      - ./data:/app/data
+    command: >
+      python -m uvicorn raceengine_api.main:app --host 0.0.0.0 --port 8000
+
+  # ── Opcional: sustrato de routing compilado (doc 11 §6) ──────────────────
+  # Antes de levantarlo, coloca un extracto .pbf en ./data/pbf/
+  #   curl -o data/pbf/chile.osm.pbf https://download.geofabrik.de/south-america/chile-latest.osm.pbf
+  #   osmium extract -b -70.85,-33.65,-70.45,-33.30 data/pbf/chile.osm.pbf -o data/pbf/santiago.osm.pbf
+  graphhopper:
+    image: israelhikingmap/graphhopper:latest
+    profiles: ["graphhopper"]
+    ports: ["8989:8989"]
+    volumes:
+      - ./data/pbf:/data
+      - ./infra/graphhopper:/config
+      - ./data/gh-graph-cache:/graph-cache
+    command: >
+      --input /data/santiago.osm.pbf
+      --config /config/config-santiago.yml
+      --host 0.0.0.0
+    environment:
+      JAVA_OPTS: "-Xmx4g -Xms1g"
+
+  # ── Opcional: persistencia (fases F4+ del plan de migración) ─────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    profiles: ["full"]
+    environment:
+      POSTGRES_DB: raceengine
+      POSTGRES_USER: raceengine
+      POSTGRES_PASSWORD: raceengine
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["full"]
+    ports: ["6379:6379"]
+
+volumes:
+  pgdata:

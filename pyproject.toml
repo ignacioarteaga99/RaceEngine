@@ -1,0 +1,43 @@
+[project]
+name = "raceengine"
+version = "2.0.0"
+description = "RaceEngine — motor de diseño de recorridos deportivos óptimos"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=1.26",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5"]
+dem = ["rasterio>=1.3"]
+
+[project.scripts]
+raceengine-geodata = "raceengine_geodata.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "packages/contracts/raceengine_contracts",
+  "packages/routing/raceengine_routing",
+  "packages/geodata/raceengine_geodata",
+  "packages/engine/raceengine_engine",
+  "apps/api/raceengine_api",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "packages/contracts", "packages/routing", "packages/geodata",
+  "packages/engine", "apps/api",
+]
+testpaths = ["tests"]

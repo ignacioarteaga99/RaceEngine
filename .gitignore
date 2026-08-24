@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+data/graphs/
+data/cache/
+data/pbf/
+data/dem/
+*.pkl
+.DS_Store
+.env

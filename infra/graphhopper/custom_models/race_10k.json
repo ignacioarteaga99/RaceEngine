@@ -1,0 +1,16 @@
+{
+  "priority": [
+    { "if": "road_class == MOTORWAY || road_class == TRUNK", "multiply_by": "0" },
+    { "if": "road_access == PRIVATE || road_access == NO",   "multiply_by": "0" },
+    { "if": "road_environment == TUNNEL",                    "multiply_by": "0" },
+
+    { "if": "road_class == PRIMARY || road_class == SECONDARY", "multiply_by": "1.15" },
+    { "if": "road_class == RESIDENTIAL",                        "multiply_by": "0.90" },
+    { "if": "surface == GRAVEL || surface == DIRT",             "multiply_by": "0.35" },
+    { "if": "surface == COBBLESTONE",                           "multiply_by": "0.50" }
+  ],
+  "speed": [
+    { "if": "true", "limit_to": "12" }
+  ],
+  "distance_influence": 70
+}

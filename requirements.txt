@@ -1,0 +1,13 @@
+# Dependencias reales del proyecto. Nada de pip freeze de la máquina entera.
+numpy>=1.26
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+requests>=2.31          # solo para el pipeline offline (Overpass / elevación)
+
+# Desarrollo
+pytest>=8
+httpx>=0.27
+
+# Opcional: muestreo de un DEM local (Copernicus GLO-30). Requiere GDAL.
+#   pip install rasterio

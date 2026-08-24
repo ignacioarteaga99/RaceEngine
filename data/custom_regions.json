@@ -1,0 +1,21 @@
+[
+  {
+    "id": "r_santiago_farellones",
+    "label": "Santiago - Farellones",
+    "lat": -33.368480000000005,
+    "lon": -70.43026,
+    "radius_m": 16873,
+    "group": "Mis rutas",
+    "corridor": [
+      [
+        -33.40905,
+        -70.60535
+      ],
+      [
+        -33.32791,
+        -70.25517
+      ]
+    ],
+    "buffer_m": 7500
+  }
+]

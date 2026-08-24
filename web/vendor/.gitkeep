@@ -1,0 +1,2 @@
+Leaflet se descarga aquí con ./vendor.sh (o run.sh lo intenta automáticamente).
+Si no está, la app cae al CDN. Ver README §"Arranque".
