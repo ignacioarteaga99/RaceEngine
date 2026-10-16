@@ -141,6 +141,27 @@ def ensure_region(region: str) -> None:
     build_region(region)
 
 
+def ensure_mobile() -> None:
+    """Regenera web/mobile.html si index.html es más nuevo (o si no existe)."""
+    src, dst = ROOT / "web" / "index.html", ROOT / "web" / "mobile.html"
+    if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime:
+        import build_mobile
+        build_mobile.build()
+
+
+def lan_ip() -> str:
+    """IP de este equipo en la red local (sin enviar nada: UDP no conecta)."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        return s.getsockname()[0]
+    except OSError:
+        return "IP-DE-TU-PC"
+    finally:
+        s.close()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="RaceEngine V2")
     ap.add_argument("--port", type=int, default=8000)
@@ -155,6 +176,7 @@ def main() -> None:
     check_deps()
 
     ensure_leaflet()
+    ensure_mobile()
     os.environ["RACEENGINE_WARM"] = args.region
     for r in args.region.split(","):
         ensure_region(r.strip())
@@ -164,6 +186,10 @@ def main() -> None:
     print("  ╭──────────────────────────────────────────────╮")
     print(f"  │  RaceEngine V2  →  {url:<25} │")
     print("  ╰──────────────────────────────────────────────╯")
+    if args.host == "0.0.0.0":
+        print(f"  iPhone (misma WiFi):  http://{lan_ip()}:{args.port}/m")
+    else:
+        print("  ¿Desde el iPhone?  python serve.py --host 0.0.0.0  → abre /m")
     print()
 
     if not args.no_open:

@@ -79,6 +79,13 @@ def index() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/m", include_in_schema=False)
+@app.get("/mobile", include_in_schema=False)
+def mobile() -> FileResponse:
+    """Interfaz móvil (iPhone). Se genera con `python build_mobile.py`."""
+    return FileResponse(WEB_DIR / "mobile.html")
+
+
 @app.get("/healthz", include_in_schema=False)
 def healthz() -> dict:
     return {"status": "ok", "engine": ENGINE_VERSION}
