@@ -1,0 +1,18 @@
+# Blueprint de Render (plan gratis). En render.com: New → Blueprint → este repo.
+# Ojo con el plan gratis: se duerme tras 15 min sin uso (el primer acceso tarda
+# ~1 min) y el disco se borra en cada reinicio o deploy: las carreras guardadas
+# y las regiones construidas se pierden. Exporta GPX de lo que quieras conservar.
+services:
+  - type: web
+    name: raceengine
+    runtime: docker
+    plan: free
+    branch: mobile-iphone
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: RACEENGINE_WARM
+        value: demo
+      - key: RACEENGINE_PASSWORD
+        sync: false   # Render la pide al crear el servicio

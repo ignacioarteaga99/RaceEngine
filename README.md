@@ -37,6 +37,21 @@ de errores. Opciones: `--port`, `--host`, `--region`, `--reload`, `--no-open`.
 
 ---
 
+## Desde el iPhone (versión móvil)
+
+La interfaz móvil vive en **`/m`** y se genera desde la de escritorio con
+`python build_mobile.py` (`serve.py` la regenera solo si `index.html` cambió).
+
+- **En casa:** `python serve.py --host 0.0.0.0` y abre en Safari la URL que
+  imprime (`http://IP-DE-TU-PC:8000/m`). Compartir → *Añadir a pantalla de inicio*.
+- **En internet, gratis (Render):** en [render.com](https://render.com) →
+  *New → Blueprint* → este repo. Lee `render.yaml`, construye el `Dockerfile` y
+  pide `RACEENGINE_PASSWORD` (contraseña para entrar; el usuario da igual).
+  Plan gratis: se duerme tras 15 min sin uso (~1 min en despertar) y **el disco
+  se borra en cada reinicio**: carreras y regiones construidas no persisten.
+
+---
+
 ## Cómo se usa
 
 1. **Elige la región** (arriba a la izquierda). Arranca con *Demo*, una ciudad

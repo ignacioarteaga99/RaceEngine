@@ -68,6 +68,37 @@ app.add_middleware(
 )
 
 
+# ── Contraseña opcional ──────────────────────────────────────────────────────
+# En local no hace falta. Desplegada en internet (Render…), cualquiera con la URL
+# podría construir regiones o borrar carreras: con RACEENGINE_PASSWORD definida se
+# exige HTTP Basic (cualquier usuario + esa contraseña). /healthz queda abierto
+# para el chequeo de salud del proveedor.
+_PASSWORD = os.environ.get("RACEENGINE_PASSWORD", "")
+
+if _PASSWORD:
+    import base64
+    import hmac
+
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class _BasicAuth(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            if request.url.path == "/healthz" or request.method == "OPTIONS":
+                return await call_next(request)
+            auth = request.headers.get("authorization", "")
+            if auth.startswith("Basic "):
+                try:
+                    _, _, pw = base64.b64decode(auth[6:]).decode().partition(":")
+                except (ValueError, UnicodeDecodeError):
+                    pw = ""
+                if hmac.compare_digest(pw.encode(), _PASSWORD.encode()):
+                    return await call_next(request)
+            return Response(status_code=401,
+                            headers={"WWW-Authenticate": 'Basic realm="RaceEngine"'})
+
+    app.add_middleware(_BasicAuth)
+
+
 # ── Estáticos ────────────────────────────────────────────────────────────────
 VENDOR_DIR = WEB_DIR / "vendor"
 VENDOR_DIR.mkdir(parents=True, exist_ok=True)
