@@ -6,6 +6,7 @@ modo que sustituir el backend no cambia los routers.
 """
 from __future__ import annotations
 
+import os
 import queue
 import threading
 import time
@@ -100,6 +101,18 @@ class JobManager:
 
     def route(self, route_id: str) -> dict | None:
         return self._routes.get(route_id)
+
+
+def _build_elsewhere_msg(spec) -> str:
+    """Servidor pequeño (RACEENGINE_LOCAL_BUILD=0): construir aquí lo tumbaría."""
+    extra = ""
+    if spec.group in ("Mis ciudades", "Mis rutas") and not spec.corridor:
+        extra = (f", label «{spec.label}», lat {spec.lat:.5f}, lon {spec.lon:.5f}, "
+                 f"radius_m {spec.radius_m}")
+    return ("Este servidor no tiene memoria para construir regiones (hace falta "
+            "0,6–1,6 GB). Constrúyela en GitHub: Actions → «Construir región» → "
+            f"Run workflow, con region «{spec.id}»{extra}. En unos minutos aparece "
+            "aquí como construida.")
 
 
 class RegionBuilder:
@@ -213,9 +226,18 @@ class RegionBuilder:
                 })
 
             try:
-                from raceengine_geodata import build_region
+                from raceengine_geodata import build_region, remote
+                from raceengine_geodata.regions import REGIONS, graph_path
+                spec = REGIONS.get(region)
                 with redirect_stdout(buf):
-                    build_region(region, elevation=elevation, progress=on_progress)
+                    if remote.has(region) and not graph_path(region).exists():
+                        # Ya construida en CI: descargar son segundos.
+                        remote.fetch(region, graph_path(region), progress=on_progress)
+                    elif (os.environ.get("RACEENGINE_LOCAL_BUILD", "1") == "0"
+                          and spec is not None and not spec.synthetic):
+                        raise RuntimeError(_build_elsewhere_msg(spec))
+                    else:
+                        build_region(region, elevation=elevation, progress=on_progress)
                 self._state[region] = {
                     "state": "done", "pct": 100.0, "message": "listo",
                     "log": buf.getvalue().splitlines()[-40:],

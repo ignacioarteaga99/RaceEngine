@@ -1,0 +1,32 @@
+# Blueprint de Render (plan gratis). En render.com: New → Blueprint → este repo.
+#
+# El disco del plan gratis se borra cada vez que el servicio se duerme (15 min
+# sin uso) o se redepliega. Por eso aquí no se guarda nada en disco:
+#   · Carreras → Postgres gratis en Neon (DATABASE_URL).
+#   · Regiones → se construyen en GitHub Actions (workflow «Construir región»;
+#     construir necesita 0,6–1,6 GB de RAM y aquí hay 512 MB) y el servidor las
+#     descarga de la Release «graphs» la primera vez que se usan.
+services:
+  - type: web
+    name: raceengine
+    runtime: docker
+    plan: free
+    branch: mobile-iphone
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: RACEENGINE_WARM
+        value: demo
+      - key: RACEENGINE_GRAPHS_URL
+        value: https://github.com/ignacioarteaga99/RaceEngine/releases/download/graphs
+      - key: RACEENGINE_LOCAL_BUILD
+        value: "0"
+      # Una región real en memoria a la vez: Santiago Metro sola llega a ~400 MB
+      # generando un 10K; con otra al lado no cabe en 512 MB.
+      - key: RACEENGINE_MAX_REGIONS
+        value: "1"
+      - key: RACEENGINE_PASSWORD
+        sync: false   # Render la pide al crear el servicio
+      - key: DATABASE_URL
+        sync: false   # connection string de Neon (postgresql://…)

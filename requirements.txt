@@ -4,6 +4,7 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic>=2.7
 requests>=2.31          # solo para el pipeline offline (Overpass / elevación)
+psycopg[binary]>=3.2   # solo si se define DATABASE_URL (Postgres/Neon)
 
 # Desarrollo
 pytest>=8

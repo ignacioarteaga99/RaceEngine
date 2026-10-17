@@ -196,6 +196,16 @@ def add_corridor_region(region_id: str, label: str, points, buffer_m: int) -> Re
     return spec
 
 
+def forget(region_id: str) -> None:
+    """Saca de memoria una región (y las compuestas que la usan). El disco no se toca."""
+    parts = set(region_parts(region_id))
+    for k in list(_MEMORY):
+        if k == region_id or parts & set(region_parts(k)):
+            spec = REGIONS.get(k)
+            if spec is None or not spec.synthetic:
+                _MEMORY.pop(k, None)
+
+
 def remove_custom_region(region_id: str) -> bool:
     """Borra una región a medida y su grafo. Las curadas no se tocan."""
     spec = REGIONS.get(region_id)
@@ -340,6 +350,12 @@ def load_region(region_id: str) -> RaceGraph:
     if not path.exists():
         if REGIONS.get(region_id) and REGIONS[region_id].synthetic:
             return build_region(region_id)
+        from . import remote
+        if remote.has(region_id):
+            remote.fetch(region_id, path)
+            g = RaceGraph.load(path)
+            _MEMORY[region_id] = g
+            return g
         raise FileNotFoundError(
             f"La región «{region_id}» no está construida.\n"
             f"Ejecuta:  python -m raceengine_geodata.cli build {region_id}"
@@ -350,12 +366,19 @@ def load_region(region_id: str) -> RaceGraph:
 
 
 def available_regions() -> list[dict]:
+    from . import remote
+
+    rem = remote.manifest()          # registra también las regiones a medida remotas
     out = []
     for spec in REGIONS.values():
-        built = graph_path(spec.id).exists() or spec.id in _MEMORY
+        local = graph_path(spec.id).exists() or spec.id in _MEMORY
+        built = local or spec.id in rem
         out.append({
             "id": spec.id, "label": spec.label, "lat": spec.lat, "lon": spec.lon,
             "radius_m": spec.radius_m, "built": built, "synthetic": spec.synthetic,
+            # Construida en CI y aún no descargada: se baja al usarla por primera vez.
+            "remote": built and not local,
+            "loaded": spec.id in _MEMORY,
             "group": spec.group,
             "custom": spec.group in (CUSTOM_GROUP, CORRIDOR_GROUP),
             "corridor": [list(p) for p in spec.corridor],

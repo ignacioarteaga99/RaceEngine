@@ -10,3 +10,4 @@ data/dem/
 *.pkl
 .DS_Store
 .env
+dist/
