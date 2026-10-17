@@ -11,7 +11,7 @@ services:
     name: raceengine
     runtime: docker
     plan: free
-    branch: main
+    branch: mobile-iphone
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     autoDeploy: true
