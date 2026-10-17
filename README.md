@@ -44,11 +44,35 @@ La interfaz móvil vive en **`/m`** y se genera desde la de escritorio con
 
 - **En casa:** `python serve.py --host 0.0.0.0` y abre en Safari la URL que
   imprime (`http://IP-DE-TU-PC:8000/m`). Compartir → *Añadir a pantalla de inicio*.
-- **En internet, gratis (Render):** en [render.com](https://render.com) →
-  *New → Blueprint* → este repo. Lee `render.yaml`, construye el `Dockerfile` y
-  pide `RACEENGINE_PASSWORD` (contraseña para entrar; el usuario da igual).
-  Plan gratis: se duerme tras 15 min sin uso (~1 min en despertar) y **el disco
-  se borra en cada reinicio**: carreras y regiones construidas no persisten.
+- **En internet, gratis (Render + Neon + GitHub):**
+  1. [neon.tech](https://neon.tech) → crea un proyecto y copia el *connection
+     string* (`postgresql://…`). Ahí se guardan las carreras.
+  2. [render.com](https://render.com) → *New → Blueprint* → este repo. Lee
+     `render.yaml` y pide `RACEENGINE_PASSWORD` (contraseña para entrar; el
+     usuario da igual) y `DATABASE_URL` (lo de Neon).
+  3. Abre `https://<tu-servicio>.onrender.com/m` en el iPhone.
+
+  El plan gratis se duerme tras 15 min sin uso (~1 min en despertar) y su disco
+  se borra, pero no se pierde nada: las carreras viven en Neon y las regiones en
+  la Release `graphs` de GitHub, de donde se descargan en segundos.
+
+### Regiones en un servidor pequeño
+
+Construir una región real necesita mucha más RAM que usarla (medido):
+
+| Región | Nodos | .pkl (gzip) | RAM construir | RAM cargada |
+|---|---|---|---|---|
+| Santiago Centro (9 km) | 269 mil | 27,6 MB (11,8) | 639 MB | ~80 MB |
+| Santiago Metro (20 km) | 793 mil | 80,0 MB (33,6) | 1,6 GB | ~180 MB |
+
+Por eso, con `RACEENGINE_LOCAL_BUILD=0` el servidor no construye: las regiones
+se construyen en GitHub Actions → **Construir región** → *Run workflow* (id del
+catálogo, o id + nombre + lat/lon/radio para una ciudad nueva). El workflow
+publica `<id>.pkl.gz` y `manifest.json` en la Release `graphs`, y el resumen del
+run muestra la RAM pico de generar un 10K sobre ella. Con
+`RACEENGINE_GRAPHS_URL` apuntando a esa Release, el servidor las ofrece como
+construidas y las descarga al primer uso. La elevación sale de OpenTopoData,
+cuya API pública admite ~1.000 consultas al día: Santiago Metro gasta ~900.
 
 ---
 

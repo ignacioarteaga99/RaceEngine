@@ -1,7 +1,11 @@
 # Blueprint de Render (plan gratis). En render.com: New → Blueprint → este repo.
-# Ojo con el plan gratis: se duerme tras 15 min sin uso (el primer acceso tarda
-# ~1 min) y el disco se borra en cada reinicio o deploy: las carreras guardadas
-# y las regiones construidas se pierden. Exporta GPX de lo que quieras conservar.
+#
+# El disco del plan gratis se borra cada vez que el servicio se duerme (15 min
+# sin uso) o se redepliega. Por eso aquí no se guarda nada en disco:
+#   · Carreras → Postgres gratis en Neon (DATABASE_URL).
+#   · Regiones → se construyen en GitHub Actions (workflow «Construir región»;
+#     construir necesita 0,6–1,6 GB de RAM y aquí hay 512 MB) y el servidor las
+#     descarga de la Release «graphs» la primera vez que se usan.
 services:
   - type: web
     name: raceengine
@@ -14,5 +18,11 @@ services:
     envVars:
       - key: RACEENGINE_WARM
         value: demo
+      - key: RACEENGINE_GRAPHS_URL
+        value: https://github.com/ignacioarteaga99/RaceEngine/releases/download/graphs
+      - key: RACEENGINE_LOCAL_BUILD
+        value: "0"
       - key: RACEENGINE_PASSWORD
         sync: false   # Render la pide al crear el servicio
+      - key: DATABASE_URL
+        sync: false   # connection string de Neon (postgresql://…)

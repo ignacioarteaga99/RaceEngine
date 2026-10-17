@@ -125,10 +125,20 @@ def healthz() -> dict:
 # ── Metadatos ────────────────────────────────────────────────────────────────
 @app.get("/api/regions")
 def regions() -> list[dict]:
+    from raceengine_geodata import remote
+
+    rem = remote.manifest()
     out = []
     for r in available_regions():
         entry = dict(r)
-        if r["built"]:
+        # Con almacén remoto, las cifras salen del manifiesto: cargar cada grafo
+        # sólo para listarlo metería 250 MB en un servidor de 512.
+        if r["built"] and r["id"] in rem and not r["loaded"]:
+            m = rem[r["id"]]
+            for k in ("coverage", "nodes", "edges", "elevation", "version"):
+                if k in m:
+                    entry[k] = m[k]
+        elif r["built"]:
             try:
                 ctx = get_context(r["id"])
                 entry["coverage"] = ctx.graph.coverage

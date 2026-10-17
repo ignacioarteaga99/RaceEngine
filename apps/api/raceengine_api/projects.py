@@ -4,9 +4,9 @@ Cada carrera es un proyecto independiente: su punto de salida, sus zonas
 obligatorias y prohibidas, y sus ajustes de capas. Editar uno no toca los demás.
 
 Persistencia: un JSON por proyecto en `data/projects/`. Deliberadamente simple —
-sin base de datos, sin migraciones, sin servidor extra. Cuando llegue la fase F4
-del plan de migración esto se sustituye por PostGIS sin cambiar el contrato HTTP,
-que es lo que consume la interfaz.
+sin base de datos, sin migraciones, sin servidor extra. Con `DATABASE_URL` se usa
+Postgres (`PgProjectStore`) con el mismo contrato HTTP, para despliegues cuyo
+disco no sobrevive a un reinicio.
 """
 from __future__ import annotations
 
@@ -138,4 +138,103 @@ class ProjectStore:
         tmp.replace(path)
 
 
-store = ProjectStore()
+class PgProjectStore:
+    """Mismo contrato que `ProjectStore`, en Postgres (p. ej. Neon, gratis).
+
+    Para despliegues cuyo disco se borra al reiniciar (Render gratis). Se activa
+    con `DATABASE_URL`; sin ella, las carreras siguen en `data/projects/`.
+    El `state` va como JSONB: sigue siendo opaco para el servidor.
+    """
+
+    _COLS = "id, name, description, created_at, updated_at"
+
+    def __init__(self, url: str):
+        import psycopg
+        from psycopg.rows import dict_row
+
+        self._connect = lambda: psycopg.connect(url, row_factory=dict_row,
+                                                connect_timeout=15)
+        with self._connect() as c:
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id          text PRIMARY KEY,
+                    name        text NOT NULL,
+                    description text NOT NULL DEFAULT '',
+                    created_at  double precision NOT NULL,
+                    updated_at  double precision NOT NULL,
+                    state       jsonb NOT NULL DEFAULT '{}'::jsonb
+                )""")
+
+    def list(self) -> list[ProjectMeta]:
+        with self._connect() as c:
+            rows = c.execute(
+                f"SELECT {self._COLS} FROM projects ORDER BY updated_at DESC").fetchall()
+        return [ProjectMeta(**r) for r in rows]
+
+    def get(self, pid: str) -> Project | None:
+        if not _SAFE.match(pid):
+            raise ValueError(f"identificador de proyecto inválido: {pid!r}")
+        with self._connect() as c:
+            r = c.execute(f"SELECT {self._COLS}, state FROM projects WHERE id = %s",
+                          (pid,)).fetchone()
+        return Project(**r) if r else None
+
+    def create(self, data: ProjectIn) -> Project:
+        now = time.time()
+        p = Project(id=uuid.uuid4().hex[:12], name=data.name.strip(),
+                    description=data.description.strip(),
+                    created_at=now, updated_at=now, state=data.state)
+        self._write(p)
+        return p
+
+    def update(self, pid: str, patch: ProjectPatch) -> Project | None:
+        p = self.get(pid)
+        if p is None:
+            return None
+        if patch.name is not None:
+            p.name = patch.name.strip()
+        if patch.description is not None:
+            p.description = patch.description.strip()
+        if patch.state is not None:
+            p.state = patch.state
+        p.updated_at = time.time()
+        self._write(p)
+        return p
+
+    def delete(self, pid: str) -> bool:
+        if not _SAFE.match(pid):
+            raise ValueError(f"identificador de proyecto inválido: {pid!r}")
+        with self._connect() as c:
+            return c.execute("DELETE FROM projects WHERE id = %s", (pid,)).rowcount > 0
+
+    def duplicate(self, pid: str, name: str | None = None) -> Project | None:
+        src = self.get(pid)
+        if src is None:
+            return None
+        return self.create(ProjectIn(
+            name=(name or f"{src.name} (copia)")[:120],
+            description=src.description, state=dict(src.state)))
+
+    def _write(self, p: Project) -> None:
+        from psycopg.types.json import Jsonb
+
+        with self._connect() as c:
+            c.execute("""
+                INSERT INTO projects (id, name, description, created_at, updated_at, state)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name, description = EXCLUDED.description,
+                    updated_at = EXCLUDED.updated_at, state = EXCLUDED.state""",
+                (p.id, p.name, p.description, p.created_at, p.updated_at,
+                 Jsonb(p.state)))
+
+
+def _make_store() -> ProjectStore | PgProjectStore:
+    url = os.environ.get("DATABASE_URL", "").strip()
+    if url:
+        print("[projects] carreras en Postgres (DATABASE_URL)")
+        return PgProjectStore(url)
+    return ProjectStore()
+
+
+store = _make_store()
