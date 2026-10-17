@@ -6,6 +6,8 @@ se pre-calienta al arrancar el worker y se comparte entre peticiones.
 """
 from __future__ import annotations
 
+import gc
+import os
 import time
 from dataclasses import dataclass
 
@@ -146,8 +148,46 @@ def build_context(region_id: str) -> GraphContext:
     return ctx
 
 
+# Tope de regiones reales en memoria (0 = sin tope). En un servidor de 512 MB,
+# Santiago Metro sola llega a ~400 MB generando: con otra cargada al lado no
+# cabe. Con RACEENGINE_MAX_REGIONS=1 se descarga la anterior al cargar otra.
+# Las sintéticas (Demo) no cuentan: pesan nada y se regeneran solas.
+MAX_REGIONS = int(os.environ.get("RACEENGINE_MAX_REGIONS", "0") or 0)
+
+
+def _is_synthetic(region_id: str) -> bool:
+    from raceengine_geodata import REGIONS, region_parts
+
+    return all(REGIONS.get(p) is not None and REGIONS[p].synthetic
+               for p in region_parts(region_id))
+
+
+def _make_room(incoming: str) -> None:
+    """Suelta las regiones reales menos recientes hasta dejar hueco para otra."""
+    if MAX_REGIONS <= 0 or _is_synthetic(incoming):
+        return
+    real = [r for r in _CONTEXTS if not _is_synthetic(r)]
+    drop = real[:max(0, len(real) - MAX_REGIONS + 1)]
+    if not drop:
+        return
+    from raceengine_geodata.regions import forget
+
+    from . import snap
+
+    for r in drop:
+        _CONTEXTS.pop(r, None)
+        forget(r)
+    # El caché de anclajes guarda arrays del grafo; sin vaciarlo no se libera nada.
+    snap._CACHE.clear()
+    gc.collect()
+    print(f"[context] liberadas de memoria: {', '.join(drop)}")
+
+
 def get_context(region_id: str) -> GraphContext:
-    if region_id not in _CONTEXTS:
+    if region_id in _CONTEXTS:
+        _CONTEXTS[region_id] = _CONTEXTS.pop(region_id)     # LRU: al final
+    else:
+        _make_room(region_id)
         _CONTEXTS[region_id] = build_context(region_id)
     return _CONTEXTS[region_id]
 

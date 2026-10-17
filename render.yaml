@@ -11,7 +11,7 @@ services:
     name: raceengine
     runtime: docker
     plan: free
-    branch: mobile-iphone
+    branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     autoDeploy: true
@@ -22,6 +22,10 @@ services:
         value: https://github.com/ignacioarteaga99/RaceEngine/releases/download/graphs
       - key: RACEENGINE_LOCAL_BUILD
         value: "0"
+      # Una región real en memoria a la vez: Santiago Metro sola llega a ~400 MB
+      # generando un 10K; con otra al lado no cabe en 512 MB.
+      - key: RACEENGINE_MAX_REGIONS
+        value: "1"
       - key: RACEENGINE_PASSWORD
         sync: false   # Render la pide al crear el servicio
       - key: DATABASE_URL

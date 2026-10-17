@@ -196,6 +196,16 @@ def add_corridor_region(region_id: str, label: str, points, buffer_m: int) -> Re
     return spec
 
 
+def forget(region_id: str) -> None:
+    """Saca de memoria una región (y las compuestas que la usan). El disco no se toca."""
+    parts = set(region_parts(region_id))
+    for k in list(_MEMORY):
+        if k == region_id or parts & set(region_parts(k)):
+            spec = REGIONS.get(k)
+            if spec is None or not spec.synthetic:
+                _MEMORY.pop(k, None)
+
+
 def remove_custom_region(region_id: str) -> bool:
     """Borra una región a medida y su grafo. Las curadas no se tocan."""
     spec = REGIONS.get(region_id)

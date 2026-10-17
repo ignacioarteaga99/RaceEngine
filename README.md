@@ -74,6 +74,10 @@ run muestra la RAM pico de generar un 10K sobre ella. Con
 construidas y las descarga al primer uso. La elevación sale de OpenTopoData,
 cuya API pública admite ~1.000 consultas al día: Santiago Metro gasta ~900.
 
+RAM pico generando un 10K (medida en el workflow): Santiago Centro 169 MB,
+Santiago Metro 395 MB. Con `RACEENGINE_MAX_REGIONS=1` el servidor mantiene una
+sola región real en memoria y suelta la anterior al cargar otra.
+
 ---
 
 ## Cómo se usa
