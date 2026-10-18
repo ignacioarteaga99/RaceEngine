@@ -95,18 +95,18 @@ CSS = """
   .m-ctr{padding-top:0!important}
   .m-ctr>#map{position:absolute!important;inset:0;height:auto}
   /* Barra de modos: píldoras translúcidas en una fila deslizable. */
-  .m-ctr>div:nth-child(4){position:absolute;z-index:700;left:0;right:0;
+  .m-modes{position:absolute;z-index:700;left:0;right:0;
     top:calc(var(--st) + 8px);background:none!important;border:none!important;
     padding:0 10px!important;flex-wrap:nowrap!important;overflow-x:auto;
     gap:6px!important;scrollbar-width:none;pointer-events:none}
-  .m-ctr>div:nth-child(4)::-webkit-scrollbar{display:none}
-  .m-ctr>div:nth-child(4)>*{flex:0 0 auto;pointer-events:auto}
-  .m-ctr>div:nth-child(4)>span,#btnImportTop,#btnGen,#btnCancel{display:none!important}
-  .m-ctr>div:nth-child(4) button{min-height:36px;padding:7px 12px;font-size:13.5px;
+  .m-modes::-webkit-scrollbar{display:none}
+  .m-modes>*{flex:0 0 auto;pointer-events:auto}
+  .m-modes>span,#btnImportTop,#btnGen,#btnCancel{display:none!important}
+  .m-modes button{min-height:36px;padding:7px 12px;font-size:13.5px;
     border-radius:18px;background:rgba(17,21,28,.86);border-color:rgba(255,255,255,.08);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     box-shadow:0 2px 10px rgba(0,0,0,.35)}
-  .m-ctr>div:nth-child(4) button.active{background:var(--accent);color:#04121f}
+  .m-modes button.active{background:var(--accent);color:#04121f}
   /* Estado: una píldora pequeña bajo los modos, que no tapa nada. */
   .m-ctr>#status{position:absolute;z-index:690;top:calc(var(--st) + 52px);left:10px;
     right:auto;max-width:calc(100% - 76px);padding:5px 11px;border:none;
@@ -197,6 +197,9 @@ NAV = """
   var app = document.getElementById('app');
   var ctr = app.children[1], cfgPanel = app.children[0];
   ctr.classList.add('m-ctr');
+  // Clase propia y no :nth-child: al mover #tabs cambia la posición de la barra.
+  var modes = document.getElementById('btnGen').parentElement;
+  modes.classList.add('m-modes');
   // Las carreras (pestañas, Guardar, Mis carreras…) van arriba de Ajustes: en el
   // mapa ocupaban una fila entera que no se usa mientras se pincha.
   var tabs = document.getElementById('tabs');
