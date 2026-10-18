@@ -3,13 +3,14 @@
 #
 # Uso: pestaña Actions → «Construir región» → Run workflow.
 #   · Región del catálogo (santiago_centro, las_condes, …): basta el id.
+#     Varias a la vez separadas por coma: las_condes,providencia,nunoa
 #   · Ciudad nueva: id inventado (p. ej. c_pucon) + nombre, lat, lon y radio.
 name: Construir región
 on:
   workflow_dispatch:
     inputs:
       region:
-        description: "Id de la región (p. ej. santiago_centro)"
+        description: "Id de la región, o varias separadas por coma (las_condes,providencia)"
         required: true
       label:
         description: "Solo ciudad nueva: nombre visible"
@@ -51,37 +52,42 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
 
-      - name: Construir
-        run: |
-          args=("$REGION" --elevation "${{ inputs.elevation }}")
-          if [ -n "${{ inputs.lat }}" ]; then
-            args+=(--label "${{ inputs.label }}" --lat "${{ inputs.lat }}"
-                   --lon "${{ inputs.lon }}" --radius-m "${{ inputs.radius_m }}")
-          fi
-          python scripts/ci_region.py build "${args[@]}"
-
-      - name: Prueba de humo (genera un 10K y mide la RAM)
-        run: python scripts/ci_region.py smoke "$REGION" | tee smoke.txt
-
-      - name: Publicar en la Release «graphs»
+      - name: Construir, probar y publicar
+        # Cada región se publica en cuanto está lista: si una falla, las
+        # anteriores ya quedaron en la Release.
         run: |
           gh release view graphs >/dev/null 2>&1 || gh release create graphs \
             --title "Grafos de regiones" --latest=false \
             --notes "Grafos precompilados por el workflow «Construir región». No borrar: el servidor los descarga desde aquí."
-          gh release download graphs -p manifest.json -D dist --clobber 2>/dev/null || true
-          python scripts/ci_region.py merge dist/manifest.json "dist/$REGION.entry.json"
-          gh release upload graphs "dist/$REGION.pkl.gz" dist/manifest.json --clobber
+          IFS=',' read -ra REGIONS <<< "$REGION"
+          for r in "${REGIONS[@]}"; do
+            r="$(echo "$r" | xargs)"; [ -z "$r" ] && continue
+            echo "::group::$r"
+            args=("$r" --elevation "${{ inputs.elevation }}")
+            if [ -n "${{ inputs.lat }}" ]; then
+              args+=(--label "${{ inputs.label }}" --lat "${{ inputs.lat }}"
+                     --lon "${{ inputs.lon }}" --radius-m "${{ inputs.radius_m }}")
+            fi
+            python scripts/ci_region.py build "${args[@]}"
+            python scripts/ci_region.py smoke "$r" | grep RAM | tee -a smoke.txt
+            rm -f dist/manifest.json
+            gh release download graphs -p manifest.json -D dist --clobber 2>/dev/null || true
+            python scripts/ci_region.py merge dist/manifest.json "dist/$r.entry.json"
+            gh release upload graphs "dist/$r.pkl.gz" dist/manifest.json --clobber
+            echo "::notice title=region $r::$(grep "^$r:" smoke.txt)"
+            echo "::endgroup::"
+          done
 
       - name: Resumen
+        if: always()
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json, os
-          e = json.load(open(f"dist/{os.environ['REGION']}.entry.json"))
-          print(f"### {e['label']} (`{e['id']}`)\n")
-          print("| nodos | .pkl | gzip | RAM construir | RAM generar un 10K | elevación |")
-          print("|---|---|---|---|---|---|")
-          print(f"| {e['nodes']:,} | {e['size']/1e6:.1f} MB | {e['size_gz']/1e6:.1f} MB "
-                f"| {e['build_peak_mb']} MB | {e.get('serve_peak_mb', '?')} MB "
-                f"| {'sí' if e['elevation'] else 'no'} |")
+          import glob, json
+          print("| región | nodos | .pkl | gzip | RAM construir | RAM generar un 10K | elevación |")
+          print("|---|---|---|---|---|---|---|")
+          for f in sorted(glob.glob("dist/*.entry.json")):
+              e = json.load(open(f))
+              print(f"| {e['label']} (`{e['id']}`) | {e['nodes']:,} | {e['size']/1e6:.1f} MB "
+                    f"| {e['size_gz']/1e6:.1f} MB | {e['build_peak_mb']} MB "
+                    f"| {e.get('serve_peak_mb', '?')} MB | {'sí' if e['elevation'] else 'no'} |")
           PY
-          echo "::notice title=region ${REGION}::$(cat smoke.txt)"
