@@ -50,6 +50,9 @@ REGIONS: dict[str, RegionSpec] = {
     "providencia": RegionSpec("providencia", "Providencia", -33.4258, -70.6100, 7000, group="Santiago"),
     "nunoa": RegionSpec("nunoa", "Ñuñoa", -33.4569, -70.5975, 7000, group="Santiago"),
     "vitacura": RegionSpec("vitacura", "Vitacura", -33.3899, -70.5760, 7000, group="Santiago"),
+    # Sólo la parte urbana (La Dehesa, El Arrayán, Los Trapenses): la comuna
+    # sube hasta Farellones y un círculo que la abarcara sería casi todo cerro.
+    "lo_barnechea": RegionSpec("lo_barnechea", "Lo Barnechea", -33.3530, -70.5200, 7000, group="Santiago"),
     "santiago_metro": RegionSpec("santiago_metro", "Santiago (área metropolitana)",
                                  -33.4450, -70.6500, 20000, group="Santiago"),
 
