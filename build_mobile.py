@@ -87,23 +87,58 @@ CSS = """
   .alt{padding:11px;font-size:13px}
   .kv{font-size:13.5px;padding:6px 0}
 
-  /* Barra de modos del mapa: una sola fila con scroll horizontal. */
-  #app>div:nth-child(2)>div:nth-child(4){flex-wrap:nowrap!important;overflow-x:auto;
-    padding:8px 10px!important;scrollbar-width:none}
-  #app>div:nth-child(2)>div:nth-child(4)::-webkit-scrollbar{display:none}
-  #app>div:nth-child(2)>div:nth-child(4)>*{flex:0 0 auto}
-  #app>div:nth-child(2)>div:nth-child(4)>span:first-child{display:none}
-  #tabs{min-height:44px}
+  /* ── Pantalla Mapa: el mapa ocupa TODO y los controles flotan encima ────
+     En el escritorio son filas fijas que le roban ~170 px de alto al mapa; en
+     un teléfono eso es un tercio de la pantalla. */
+  #tabs{min-height:44px;border-radius:0;padding:8px 12px}
   .tab{padding:8px 11px;font-size:13px}
-
-  /* Controles flotantes sobre el mapa. */
-  .mapstack{left:56px;right:8px;top:8px}
-  .routebar{max-width:none}
+  .m-ctr{padding-top:0!important}
+  .m-ctr>#map{position:absolute!important;inset:0;height:auto}
+  /* Barra de modos: píldoras translúcidas en una fila deslizable. */
+  .m-ctr>div:nth-child(4){position:absolute;z-index:700;left:0;right:0;
+    top:calc(var(--st) + 8px);background:none!important;border:none!important;
+    padding:0 10px!important;flex-wrap:nowrap!important;overflow-x:auto;
+    gap:6px!important;scrollbar-width:none;pointer-events:none}
+  .m-ctr>div:nth-child(4)::-webkit-scrollbar{display:none}
+  .m-ctr>div:nth-child(4)>*{flex:0 0 auto;pointer-events:auto}
+  .m-ctr>div:nth-child(4)>span,#btnImportTop,#btnGen,#btnCancel{display:none!important}
+  .m-ctr>div:nth-child(4) button{min-height:36px;padding:7px 12px;font-size:13.5px;
+    border-radius:18px;background:rgba(17,21,28,.86);border-color:rgba(255,255,255,.08);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .m-ctr>div:nth-child(4) button.active{background:var(--accent);color:#04121f}
+  /* Estado: una píldora pequeña bajo los modos, que no tapa nada. */
+  .m-ctr>#status{position:absolute;z-index:690;top:calc(var(--st) + 52px);left:10px;
+    right:auto;max-width:calc(100% - 76px);padding:5px 11px;border:none;
+    border-radius:14px;font-size:12px;background:rgba(17,21,28,.82);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none}
+  .m-ctr>#status #timing{margin-left:6px}
+  .m-ctr>#prog{position:absolute;z-index:710;top:var(--st);left:0;right:0;height:3px;
+    background:transparent}
+  /* Salida/meta y «Ir a…» plegados: se abren con los botones redondos. */
+  .mapstack{left:10px;right:62px;top:calc(var(--st) + 88px)}
+  .routebar{max-width:none;display:none!important}
+  body.m-ends .routebar{display:flex!important}
   .mapbar #drawRead{min-width:0}
-  .mapfind{left:8px;right:8px;width:auto;bottom:66px}
-  .mapctl{right:8px;bottom:8px}
-  .leaflet-touch .leaflet-bar a{width:38px;height:38px;line-height:38px}
+  .mapfind{display:none;left:10px;right:62px;width:auto;top:calc(var(--st) + 88px);bottom:auto}
+  body.m-find .mapfind{display:block}
+  body.m-find .mapstack{display:none}
+  .mapctl{left:10px;right:auto;bottom:12px}
+  .mapctl select{min-width:0;font-size:13px;padding:7px 9px;border-radius:16px}
+  .leaflet-control-zoom{display:none}
+  .leaflet-control-attribution{font-size:9px!important;max-width:60vw;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.7}
   #maphud{display:none}
+  /* Botones redondos a la derecha. */
+  #mFabs{position:absolute;z-index:705;right:10px;top:calc(var(--st) + 52px);
+    display:flex;flex-direction:column;gap:9px}
+  #mFabs button{width:44px;height:44px;min-height:0;padding:0;border-radius:22px;
+    font-size:19px;line-height:1;background:rgba(17,21,28,.86);
+    border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  #mFabs button.on{background:var(--accent);color:#04121f}
+  .m-me{width:16px;height:16px;border-radius:50%;background:#4da3ff;
+    border:3px solid #fff;box-shadow:0 0 0 6px rgba(77,163,255,.25)}
 
   /* Modales y galería a pantalla casi completa. */
   .modal .box{width:calc(100vw - 24px);max-height:85dvh;overflow:auto}
@@ -131,7 +166,8 @@ CSS = """
   #mGen{position:fixed;right:14px;bottom:calc(var(--navh) + var(--sb) + 14px);z-index:1400;
     border-radius:26px;padding:12px 20px;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.5);
     display:none}
-  body.m-cfg #mGen{display:block}
+  body.m-cfg #mGen,body.m-map #mGen{display:block}
+  #mGen.stop{background:var(--bad);border-color:var(--bad);color:#fff}
 """
 
 NAV = """
@@ -141,18 +177,42 @@ NAV = """
   <button data-m="res"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span data-ml="res"></span><i class="dot"></i></button>
 </nav>
 <button id="mGen" class="primary"></button>
+<div id="mFabs">
+  <button id="mEnds" title="Salida y meta">🏁</button>
+  <button id="mFind" title="Buscar lugar">🔍</button>
+  <button id="mLocate" title="Mi ubicación">◎</button>
+  <button id="mSave" title="Guardar carrera">💾</button>
+</div>
 <script>
 /* ── Navegación móvil ───────────────────────────────────────────────────── */
 (function () {
   var L10N = {
-    es: { cfg: 'Ajustes', map: 'Mapa', res: 'Resultado', gen: '▶ Generar' },
-    en: { cfg: 'Settings', map: 'Map', res: 'Result', gen: '▶ Generate' },
+    es: { cfg: 'Ajustes', map: 'Mapa', res: 'Resultado', gen: '▶ Generar',
+          stop: '■ Detener', saved: 'Carrera guardada', noloc: 'No se pudo obtener tu ubicación' },
+    en: { cfg: 'Settings', map: 'Map', res: 'Result', gen: '▶ Generate',
+          stop: '■ Stop', saved: 'Race saved', noloc: 'Could not get your location' },
   };
+
+  // ── Reubicar piezas del escritorio para el teléfono ──────────────────────
+  var app = document.getElementById('app');
+  var ctr = app.children[1], cfgPanel = app.children[0];
+  ctr.classList.add('m-ctr');
+  // Las carreras (pestañas, Guardar, Mis carreras…) van arriba de Ajustes: en el
+  // mapa ocupaban una fila entera que no se usa mientras se pincha.
+  var tabs = document.getElementById('tabs');
+  var hdr = cfgPanel.querySelector('header');
+  if (tabs && hdr) hdr.after(tabs);
+  var fabs = document.getElementById('mFabs');
+  document.getElementById('map').appendChild(fabs);
+  ['click', 'dblclick', 'mousedown', 'touchstart', 'pointerdown'].forEach(function (ev) {
+    fabs.addEventListener(ev, function (e) { e.stopPropagation(); });
+  });
   function lang() { try { return localStorage.getItem('re_lang') === 'en' ? 'en' : 'es'; } catch (e) { return 'es'; } }
   function labels() {
     var d = L10N[lang()];
     document.querySelectorAll('[data-ml]').forEach(function (el) { el.textContent = d[el.dataset.ml]; });
-    document.getElementById('mGen').textContent = d.gen;
+    if (typeof syncGen === 'function') syncGen();
+    else document.getElementById('mGen').textContent = d.gen;
   }
   var cur = 'map';
   function show(m) {
@@ -171,10 +231,55 @@ NAV = """
   document.querySelectorAll('#mnav button').forEach(function (b) {
     b.addEventListener('click', function () { show(b.dataset.m); });
   });
-  // «Generar» desde Ajustes: lanza y lleva al mapa para ver la ruta crecer.
-  document.getElementById('mGen').addEventListener('click', function () {
+  // «Generar» flotante. Mientras genera se convierte en «Detener».
+  var mGen = document.getElementById('mGen');
+  var bCancel = document.getElementById('btnCancel');
+  mGen.addEventListener('click', function () {
+    if (bCancel && !bCancel.disabled) { bCancel.click(); return; }
     var g = document.getElementById('btnGen');
     if (g && !g.disabled) { show('map'); g.click(); }
+  });
+  function syncGen() {
+    var running = bCancel && !bCancel.disabled;
+    mGen.classList.toggle('stop', !!running);
+    mGen.textContent = L10N[lang()][running ? 'stop' : 'gen'];
+  }
+  if (bCancel) new MutationObserver(syncGen)
+    .observe(bCancel, { attributes: true, attributeFilter: ['disabled'] });
+
+  // Botones redondos del mapa.
+  function toggle(cls, btn) {
+    var on = !document.body.classList.contains(cls);
+    document.body.classList.remove('m-ends', 'm-find');
+    document.getElementById('mEnds').classList.remove('on');
+    document.getElementById('mFind').classList.remove('on');
+    if (on) { document.body.classList.add(cls); btn.classList.add('on'); }
+    return on;
+  }
+  document.getElementById('mEnds').addEventListener('click', function () {
+    toggle('m-ends', this);
+  });
+  document.getElementById('mFind').addEventListener('click', function () {
+    if (toggle('m-find', this)) setTimeout(function () {
+      var q = document.getElementById('goQ'); if (q) q.focus(); }, 50);
+  });
+  var meMarker = null;
+  document.getElementById('mLocate').addEventListener('click', function () {
+    if (typeof map === 'undefined' || !map || !navigator.geolocation) return;
+    var b = this; b.classList.add('on');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var ll = [pos.coords.latitude, pos.coords.longitude];
+      if (!meMarker) meMarker = L.marker(ll, { interactive: false,
+        icon: L.divIcon({ className: '', html: '<div class="m-me"></div>', iconSize: [22, 22] }) });
+      meMarker.setLatLng(ll).addTo(map);
+      map.setView(ll, Math.max(map.getZoom(), 15));
+      b.classList.remove('on');
+    }, function () { b.classList.remove('on'); alert(L10N[lang()].noloc); },
+    { enableHighAccuracy: true, timeout: 12000 });
+  });
+  document.getElementById('mSave').addEventListener('click', function () {
+    var b = document.querySelector('#tabs [data-act=save]');
+    if (b) b.click();
   });
   var bg = document.getElementById('btnGen');
   if (bg) bg.addEventListener('click', function () { if (cur !== 'map') show('map'); });
@@ -185,7 +290,7 @@ NAV = """
       document.querySelector('#mnav [data-m=res]').classList.add('new');
   }).observe(res, { attributes: true, attributeFilter: ['style'] });
   // Traducción de la barra si cambia el idioma.
-  document.addEventListener('click', function () { setTimeout(labels, 0); }, true);
+  document.addEventListener('click', function () { setTimeout(function () { labels(); syncGen(); }, 0); }, true);
   window.addEventListener('resize', function () {
     if (cur === 'map' && typeof map !== 'undefined' && map && map.invalidateSize) map.invalidateSize();
   });
