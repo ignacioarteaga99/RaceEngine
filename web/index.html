@@ -1024,7 +1024,7 @@ const I18N = {
     build_pending: 'quedan {n} en cola',
     build_done_n: 'regiones construidas',
     basemap: 'Estilo de mapa',
-    bm_dark: 'Oscuro', bm_light: 'Claro', bm_voyager: 'Voyager',
+    bm_dark: 'Oscuro', bm_light: 'Claro', bm_voyager: 'Calles',
     bm_osm: 'OSM estándar', bm_sat: 'Satélite', bm_none: 'Sin mapa base',
     repro: 'Resultado reproducible',
     repro_hint: 'El presupuesto se gasta en una cantidad FIJA de trabajo, no en '
@@ -1305,7 +1305,7 @@ const I18N = {
     build_pending: '{n} left in the queue',
     build_done_n: 'regions built',
     basemap: 'Map style',
-    bm_dark: 'Dark', bm_light: 'Light', bm_voyager: 'Voyager',
+    bm_dark: 'Dark', bm_light: 'Light', bm_voyager: 'Streets',
     bm_osm: 'Standard OSM', bm_sat: 'Satellite', bm_none: 'No basemap',
     repro: 'Reproducible result',
     repro_hint: 'The budget is spent on a FIXED amount of work, not on wall-clock '
@@ -1470,16 +1470,23 @@ function applyLang() {
 // Mapas base. El oscuro es el que va con la interfaz; los demás están porque
 // según para qué —un satélite para ver el terreno real, uno claro para imprimir—
 // cada uno gana. La atribución de cada proveedor es obligatoria y va incluida.
+// CARTO pasó a exigir API key fuera de localhost (las teselas llegan con una
+// marca «API KEY REQUIRED»), así que los tres primeros son de Esri, sin clave.
+// Los lienzos gris de Esri llegan hasta z16; `native` los amplía por encima.
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
 const BASEMAPS = {
   dark: { t: 'bm_dark',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attr: '© OpenStreetMap contributors © CARTO', max: 20 },
+    url: ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attr: 'Mapa base © Esri, HERE, Garmin · datos © OpenStreetMap contributors',
+    max: 20, native: 16 },
   voyager: { t: 'bm_voyager',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attr: '© OpenStreetMap contributors © CARTO', max: 20 },
+    url: ESRI + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attr: 'Mapa base © Esri, HERE, Garmin · datos © OpenStreetMap contributors',
+    max: 20, native: 19 },
   light: { t: 'bm_light',
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attr: '© OpenStreetMap contributors © CARTO', max: 20 },
+    url: ESRI + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attr: 'Mapa base © Esri, HERE, Garmin · datos © OpenStreetMap contributors',
+    max: 20, native: 16 },
   osm: { t: 'bm_osm',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr: '© OpenStreetMap contributors', max: 19 },
@@ -1497,7 +1504,7 @@ function setBasemap(id) {
   if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
   if (b.url) {
     baseLayer = L.tileLayer(b.url, { maxZoom: b.max, attribution: b.attr,
-      subdomains: 'abcd' });
+      maxNativeZoom: b.native || b.max, subdomains: 'abcd' });
     baseLayer.addTo(map);
     // El mapa base va SIEMPRE debajo de rutas y zonas.
     if (baseLayer.bringToBack) baseLayer.bringToBack();
