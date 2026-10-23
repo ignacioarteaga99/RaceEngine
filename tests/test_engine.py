@@ -2197,3 +2197,31 @@ def test_no_route_says_why_not_just_that_there_is_none(ctx):
         d = r.infeasibility.blocking[0].detail
         # Diga lo que diga, tiene que traer cifras de red y una pista accionable.
         assert "nodos" in d and ("%" in d or "restricci" in d)
+
+
+def test_camino_minimo_en_c_da_el_mismo_coste_que_el_astar(ctx):
+    """Con scipy, el camino mínimo sale del Dijkstra en C: mismo coste que el A*
+    (también con aristas penalizadas, nodos a evitar y cota de distancia)."""
+    pytest.importorskip("scipy")
+    from raceengine_engine.weights import build_weights
+    g, prov = ctx.graph, ctx.provider
+    w, _ = build_weights(g, model(), ctx.esrc, int(g.nearest_node(START.lat, START.lon)))
+    rng = np.random.default_rng(7)
+    pares = rng.integers(0, g.n_nodes, size=(40, 2))
+    penal = {int(e): 500.0 for e in rng.integers(0, g.n_edges, size=300)}
+    evitar = np.zeros(g.n_nodes, dtype=bool)
+    evitar[rng.integers(0, g.n_nodes, size=50)] = True
+    casos = 0
+    for a, b in pares:
+        for pen, av, tope in (({}, None, None), (penal, None, None), ({}, evitar, None), ({}, None, 1500.0)):
+            w.penalty = pen
+            c = prov.shortest_path(int(a), int(b), w, max_distance_m=tope, avoid_nodes=av)
+            r = prov._astar(int(a), int(b), w, max_distance_m=tope, avoid_nodes=av)
+            w.penalty = {}
+            assert (c is None) == (r is None)
+            if c is not None:
+                casos += 1
+                assert c.cost == pytest.approx(r.cost, rel=1e-6)
+                assert c.nodes[0] == a and c.nodes[-1] == b and len(c.edges) == len(c.nodes) - 1
+                assert all(int(g.indices[e]) == v for e, v in zip(c.edges, c.nodes[1:]))
+    assert casos >= 10

@@ -15,8 +15,15 @@ Diferencias deliberadas con el A* del MVP (doc 10 §2, B1/B2):
 from __future__ import annotations
 
 import heapq
+import math
 
 import numpy as np
+
+try:                                   # opcional: el servidor de RaceEngine no lo instala
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import dijkstra as _dijkstra_c
+except ImportError:                    # pragma: no cover — sin scipy, el A* de siempre
+    _dijkstra_c = None
 
 from raceengine_geodata import RaceGraph
 
@@ -64,10 +71,68 @@ class LocalRoutingProvider:
         return RouteLeg(cost=float(self._dist[dst]), distance_m=dist_m,
                         nodes=nodes, edges=edges)
 
-    # ── A* ────────────────────────────────────────────────────────────────────
+    # ── Camino mínimo ─────────────────────────────────────────────────────────
     def shortest_path(self, src: int, dst: int, w: RoutingWeights,
                       max_distance_m: float | None = None,
                       avoid_nodes: np.ndarray | None = None) -> RouteLeg | None:
+        """Con scipy instalado, Dijkstra en C (`_shortest_path_c`); si no, A*."""
+        if _dijkstra_c is not None and src != dst:
+            return self._shortest_path_c(src, dst, w, max_distance_m, avoid_nodes)
+        return self._astar(src, dst, w, max_distance_m, avoid_nodes)
+
+    def _shortest_path_c(self, src: int, dst: int, w: RoutingWeights,
+                         max_distance_m: float | None,
+                         avoid_nodes: np.ndarray | None) -> RouteLeg | None:
+        """El mismo camino que el A* (mismo coste), con el Dijkstra de scipy.
+
+        Medido en 105 tramos reales de Las Condes (245 mil nodos): 7,9 ms por
+        tramo contra 25 ms del A* en Python, y el mismo coste en todos. Dijkstra
+        no apunta al destino como A*, así que se acota: primero hasta un coste
+        de 2× la distancia en línea recta (con el multiplicador MÍNIMO, el de la
+        heurística) y, si no llegó, el doble, hasta la cota pedida. Acotar con el
+        multiplicador máximo (miles, por las aristas casi prohibidas) recorría el
+        mapa entero y era más lento que el A*.
+        """
+        g = self.g
+        max_cost = None if max_distance_m is None else max_distance_m * max(w.max_ratio, 1.0)
+        coste = np.where(w.allowed_edges, w.weight, np.inf).astype(np.float64)
+        coste[coste <= 0] = 1e-9           # en una matriz dispersa un 0 sería «sin arista»
+        if w.penalty:
+            k = np.fromiter(w.penalty.keys(), np.int64, len(w.penalty))
+            v = np.fromiter(w.penalty.values(), np.float64, len(w.penalty))
+            np.add.at(coste, k, v)
+        if avoid_nodes is not None:
+            coste[avoid_nodes[g.indices] & (g.indices != dst)] = np.inf
+        # Misma estructura CSR que el grafo: sin copiar índices. Las aristas
+        # paralelas quedan como entradas repetidas y Dijkstra se queda con la menor.
+        m = csr_matrix((coste, g.indices, g.indptr), shape=(g.n_nodes, g.n_nodes))
+        tope = math.hypot(float(g.x[src] - g.x[dst]), float(g.y[src] - g.y[dst])) \
+            * max(float(w.min_ratio), 1e-3) * 2.0 + 300.0
+        while True:
+            lim = tope if max_cost is None else min(tope, max_cost)
+            dist, pred = _dijkstra_c(m, indices=src, limit=lim, return_predecessors=True)
+            if np.isfinite(dist[dst]) or lim == max_cost or tope > 1e12:
+                break
+            tope *= 2.0
+        if not np.isfinite(dist[dst]):
+            return None
+        nodes, edges, cur = [int(dst)], [], int(dst)
+        while cur != src:
+            u = int(pred[cur])
+            a, b = int(g.indptr[u]), int(g.indptr[u + 1])
+            cand = np.nonzero(g.indices[a:b] == cur)[0] + a
+            edges.append(int(cand[np.argmin(coste[cand])]))
+            nodes.append(u)
+            cur = u
+        nodes.reverse()
+        edges.reverse()
+        return RouteLeg(cost=float(dist[dst]), distance_m=float(g.elen[edges].sum()),
+                        nodes=nodes, edges=edges)
+
+    # ── A* ────────────────────────────────────────────────────────────────────
+    def _astar(self, src: int, dst: int, w: RoutingWeights,
+               max_distance_m: float | None = None,
+               avoid_nodes: np.ndarray | None = None) -> RouteLeg | None:
         # La cota llega en metros; el coste acumulado está ponderado. Convertir
         # con el multiplicador MÁXIMO garantiza que nunca se descarta un camino
         # que sí cabe en la distancia pedida.
