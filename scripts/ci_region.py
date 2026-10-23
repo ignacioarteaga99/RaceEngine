@@ -2,7 +2,7 @@
 """Construye una región y la prepara para publicarla (lo usa build-region.yml).
 
     python scripts/ci_region.py build  <id> [--label L --lat X --lon Y --radius-m R]
-                                           [--elevation auto|none|opentopodata]
+                                           [--elevation copernicus|auto|none|opentopodata]
     python scripts/ci_region.py smoke  <id>      # genera un 10K y mide la RAM
     python scripts/ci_region.py merge  <manifest.json> <entrada.json>
 

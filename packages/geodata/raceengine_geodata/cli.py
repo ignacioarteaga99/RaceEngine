@@ -15,7 +15,7 @@ def main() -> None:
     b = sub.add_parser("build", help="Construye el grafo de una región")
     b.add_argument("region", choices=sorted(REGIONS))
     b.add_argument("--elevation", default="auto",
-                   choices=["auto", "none", "opentopodata", "local_dem"])
+                   choices=["auto", "none", "opentopodata", "local_dem", "copernicus"])
     b.add_argument("--dem", default=None, help="Ruta a un GeoTIFF/COG local")
     b.add_argument("--force", action="store_true")
 
