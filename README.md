@@ -1195,3 +1195,9 @@ se mantiene. Mide con tu propia región antes de sacar conclusiones.
 Datos viales © OpenStreetMap contributors, bajo ODbL.
 Elevación: SRTM vía OpenTopoData, o Copernicus DEM GLO-30 © ESA si usas un DEM local.
 Toda ruta exportada lleva la atribución incrustada.
+
+## Licencia
+
+Copyright © 2026 Ignacio Arteaga. Todos los derechos reservados: el código es
+público sólo para leerlo; no se permite copiarlo ni usarlo sin permiso. Ver
+[`LICENSE`](LICENSE).
