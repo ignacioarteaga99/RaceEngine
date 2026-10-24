@@ -33,9 +33,29 @@ def peak_mb() -> float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024  # Linux: KiB
 
 
+def _nombre_lugar(lat: float, lon: float) -> str | None:
+    """«Ciudad, País» para una celda de la cuadrícula (Nominatim, una consulta).
+    Si falla, la celda se queda con sus coordenadas como nombre."""
+    import urllib.request
+    url = (f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10"
+           f"&lat={lat}&lon={lon}&accept-language=es")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "RaceEngine/2.0 (github.com/ignacioarteaga99/RaceEngine)"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            a = json.loads(r.read().decode("utf-8")).get("address", {})
+    except Exception as exc:  # noqa: BLE001
+        print(f"[nombre] sin nombre para {lat},{lon}: {exc}")
+        return None
+    lugar = next((a[k] for k in ("city", "town", "village", "municipality", "county", "state") if a.get(k)), None)
+    return ", ".join(x for x in (lugar, a.get("country")) if x) or None
+
+
 def cmd_build(a: argparse.Namespace) -> None:
+    from raceengine_geodata import grid
     from raceengine_geodata.regions import REGIONS, add_custom_region, build_region, graph_path
 
+    if a.region not in REGIONS and grid.es_celda(a.region):
+        grid.registrar(a.region, a.label or _nombre_lugar(*grid.centro(a.region)))
     if a.region not in REGIONS:
         if a.lat is None or a.lon is None:
             sys.exit(f"«{a.region}» no está en el catálogo: pasa --label, --lat y --lon")
@@ -68,8 +88,13 @@ def cmd_build(a: argparse.Namespace) -> None:
 def cmd_smoke(a: argparse.Namespace) -> None:
     from raceengine_contracts import ConstraintModel, DistanceLayer, GeoPoint
     from raceengine_engine import generate, get_context
+    from raceengine_geodata import grid
     from raceengine_geodata.regions import REGIONS
 
+    if grid.es_celda(a.region):
+        entry = DIST / f"{a.region}.entry.json"
+        label = json.loads(entry.read_text(encoding="utf-8"))["label"] if entry.exists() else None
+        grid.registrar(a.region, label)
     spec = REGIONS[a.region]
     t0 = time.time()
     get_context(a.region)

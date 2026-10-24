@@ -5,6 +5,8 @@
 #   · Región del catálogo (santiago_centro, las_condes, …): basta el id.
 #     Varias a la vez separadas por coma: las_condes,providencia,nunoa
 #   · Ciudad nueva: id inventado (p. ej. c_pucon) + nombre, lat, lon y radio.
+#   · Celda de la cuadrícula mundial (grid.py): su id, g<fila>_<col>. Las pide
+#     PacePath solo cuando alguien quiere correr ahí («preparando tu zona»).
 name: Construir región
 on:
   workflow_dispatch:
@@ -68,10 +70,22 @@ jobs:
               args+=(--label "${{ inputs.label }}" --lat "${{ inputs.lat }}"
                      --lon "${{ inputs.lon }}" --radius-m "${{ inputs.radius_m }}")
             fi
-            python scripts/ci_region.py build "${args[@]}"
-            python scripts/ci_region.py smoke "$r" | grep RAM | tee -a smoke.txt
             rm -f dist/manifest.json
             gh release download graphs -p manifest.json -D dist --clobber 2>/dev/null || true
+            # Celdas de la cuadrícula (g<fila>_<col>, las pide PacePath a medida
+            # que la gente las necesita): si ya está, no rehacerla; si falla (mar,
+            # desierto, sin calles), seguir con las demás del lote.
+            if [[ "$r" == g* ]]; then
+              if grep -q "\"id\": \"$r\"" dist/manifest.json 2>/dev/null; then
+                echo "$r ya estaba"; echo "::endgroup::"; continue
+              fi
+              if ! python scripts/ci_region.py build "${args[@]}"; then
+                echo "::warning title=region $r::no se pudo construir"; echo "::endgroup::"; continue
+              fi
+            else
+              python scripts/ci_region.py build "${args[@]}"
+            fi
+            python scripts/ci_region.py smoke "$r" | grep RAM | tee -a smoke.txt
             python scripts/ci_region.py merge dist/manifest.json "dist/$r.entry.json"
             gh release upload graphs "dist/$r.pkl.gz" dist/manifest.json --clobber
             echo "::notice title=region $r::$(grep "^$r:" smoke.txt)"
