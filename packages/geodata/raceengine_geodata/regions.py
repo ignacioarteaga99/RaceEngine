@@ -53,6 +53,20 @@ REGIONS: dict[str, RegionSpec] = {
     # Sólo la parte urbana (La Dehesa, El Arrayán, Los Trapenses): la comuna
     # sube hasta Farellones y un círculo que la abarcara sería casi todo cerro.
     "lo_barnechea": RegionSpec("lo_barnechea", "Lo Barnechea", -33.3530, -70.5200, 7000, group="Santiago"),
+    # Resto del Gran Santiago (pedido de PacePath): círculos de 8 km que juntan
+    # varias comunas cada uno, elegidos para que casi cualquier punto urbano
+    # quede con 2 km o más de calles para todos lados en algún grafo.
+    "maipu": RegionSpec("maipu", "Maipú y Cerrillos", -33.5110, -70.7620, 8000, group="Santiago"),
+    "pudahuel": RegionSpec("pudahuel", "Pudahuel y Lo Prado", -33.4660, -70.7840, 8000, group="Santiago"),
+    "renca": RegionSpec("renca", "Renca y Quilicura", -33.3850, -70.7400, 8000, group="Santiago"),
+    "huechuraba": RegionSpec("huechuraba", "Huechuraba y Conchalí", -33.3400, -70.6630, 8000, group="Santiago"),
+    "la_cisterna": RegionSpec("la_cisterna", "La Cisterna y San Miguel", -33.5380, -70.6520, 8000, group="Santiago"),
+    "la_florida": RegionSpec("la_florida", "La Florida", -33.5560, -70.5860, 8000, group="Santiago"),
+    "penalolen": RegionSpec("penalolen", "Peñalolén y La Reina", -33.4930, -70.5200, 8000, group="Santiago"),
+    "puente_alto": RegionSpec("puente_alto", "Puente Alto", -33.6100, -70.5860, 8000, group="Santiago"),
+    "san_bernardo": RegionSpec("san_bernardo", "San Bernardo y El Bosque", -33.6010, -70.6850, 8000, group="Santiago"),
+    "san_bernardo_poniente": RegionSpec("san_bernardo_poniente", "San Bernardo poniente", -33.6100, -70.7510, 8000,
+                                        group="Santiago"),
     "santiago_metro": RegionSpec("santiago_metro", "Santiago (área metropolitana)",
                                  -33.4450, -70.6500, 20000, group="Santiago"),
 
